@@ -8,7 +8,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
 #import dataset
-dataset=pd.read_csv('california_housing_dataset.csv')
+dataset=pd.read_csv('dataset/california_housing_dataset.csv')
 df=pd.DataFrame(dataset)
 
 #identifikasi missing values
@@ -25,19 +25,17 @@ df['block'] = pd.cut(df['households'], bins=20, labels=False)
 
 #fungsi untuk mengisi NaN dengan median dari setiap blok
 def fill_nan_with_block_median(group):
-return group.fillna(group.median())
+    return group.fillna(group.median())
 
 #mengisi NaN pada kolom 'total_bedrooms' dengan median dari
 #blok 'total_bedrooms' dari blok record tersebut berasal
 
-df['total_bedrooms'] =
-df.groupby('block')['total_bedrooms'].transform(fill_nan_with_block_median)
+df['total_bedrooms'] = df.groupby('block')['total_bedrooms'].transform(fill_nan_with_block_median)
 
 #kode bantu untuk cek blok dan median secara manual
 block_0_records = df.loc[df['block'] == 0]
 median_households_block_0 = block_0_records['total_bedrooms'].median()
-print("Nilai median kolom 'total_bedrooms' pada block 0:",
-median_households_block_0)
+print("Nilai median kolom 'total_bedrooms' pada block 0:", median_households_block_0)
 
 #menghapus kolom 'block' setelah proses pengisian NaN selesai
 df.drop(columns=['block'], inplace=True)
@@ -61,15 +59,13 @@ plt.show()
 
 #scatter plot: 'latitude' & 'longitude'
 plt.figure(figsize=(15,8))
-sns.scatterplot(x='latitude', y='longitude', data=df,
-hue='median_house_value')
+sns.scatterplot(x='latitude', y='longitude', data=df,hue='median_house_value')
 
 '''
 Solusi feature scaling dengan MinMaxScaler
 '''
 scaler = MinMaxScaler()
-df[['latitude', 'longitude']] = scaler.fit_transform(df[['latitude',
-'longitude']])
+df[['latitude', 'longitude']] = scaler.fit_transform(df[['latitude','longitude']])
 
 #ekstraksi variabel independen
 X = df.drop(columns=['median_house_value'])
@@ -98,5 +94,8 @@ print(eliminated_features)
 Data spliting
 '''
 #pembagian dataset menjadi training dan test set
-X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size
-= 0.2, random_state = 0)
+X_train, X_test, y_train, y_test = train_test_split(X_selected, y, test_size= 0.2, random_state = 0)
+
+print("\nData splitting berhasil.")
+print(f"Jumlah data training: {X_train.shape[0]}")
+print(f"Jumlah data testing: {X_test.shape[0]}")
