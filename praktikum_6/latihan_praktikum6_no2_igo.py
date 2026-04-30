@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # load the Iris flower dataset
-iris=pd.read_csv("dataset/praktikum_2/Iris.csv")
+iris=pd.read_csv("dataset/Iris.csv")
 
 # checking for null values
 iris.isna().sum()

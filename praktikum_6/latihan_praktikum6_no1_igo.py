@@ -6,13 +6,12 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 import matplotlib.pyplot as plt
 
 # load the breast cancer dataset
-cancer_data=pd.read_csv('dataset/praktikum_1/breast_cancer_wisconsin.csv')
+cancer_data=pd.read_csv('dataset/breast_cancer_wisconsin.csv')
 # dataset information
 print(cancer_data.info())
 
 # check missing values
 cancer_data.isnull().sum()
-
 # check for any duplicated rows
 cancer_data.duplicated().sum()
 
@@ -22,14 +21,12 @@ for column in columns_to_drop:
     cancer_data.drop(column, axis=1, inplace=True)
 
 X=cancer_data.drop("diagnosis", axis=1)
-
 # create 'y' as target/dependent variable
 y=cancer_data['diagnosis']
 
 # create graphic for class distribution
 # Mengambil data kelas target
 class_counts = cancer_data['diagnosis'].value_counts()
-
 # create plot
 plot = class_counts.plot(kind='bar', title="Class distributions : Benign | Malignant")
 

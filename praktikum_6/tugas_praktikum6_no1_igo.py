@@ -1,152 +1,97 @@
-# importing the libraries
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pandas import DataFrame
-from pandas import ExcelWriter
+import re
+from pandas import DataFrame, ExcelWriter
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
-# import dataset
-dataset1 = pd.read_csv('dataset/praktikum_3/500_berita_indonesia.csv', delimiter=';')
-dataset2 = pd.read_csv('dataset/praktikum_3/600_news_with_valid_hoax_label.csv', delimiter=';', encoding='ISO-8859-1')
+# --- 1. IMPORT & MERGE DATASET ---
+dataset1 = pd.read_csv('dataset/500_berita_indonesia.csv', delimiter=';')
+dataset2 = pd.read_csv('dataset/600_news_with_valid_hoax_label.csv', delimiter=';', encoding='ISO-8859-1')
 
-# merge dataset
 df = pd.merge(dataset1, dataset2, on=['kategori', 'berita'], how='outer')
-
-# ubah value kolom kategori menjadi huruf kecil
 df['kategori'] = df['kategori'].str.lower()
 
-'''
-create graphic for class distribution
-'''
-# Mengambil data kelas target
-class_counts = df['kategori'].value_counts()
+# --- 2. PRE-PROCESSING SETUP ---
+factory_sw = StopWordRemoverFactory()
+stopword = factory_sw.create_stop_word_remover()
+factory_st = StemmerFactory()
+stemmer = factory_st.create_stemmer()
 
-# create plot
-plot = class_counts.plot(kind='bar', title="Class distributions : Valid | Hoax")
-
-# Add text label to plot
-for i, count in enumerate(class_counts): plt.text(i, count, str(count), ha='center',
-va='bottom')
-plt.show()
-
-'''
-Tahap pra-pemrosesan teks:
-1. Punctuation removal
-2. Lowercase operation
-3. Stopwords removal
-4. Stemming
-'''
-# import Regular expression
-import re
-
-#import StopWordRemoverFactory class
-from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
-factory = StopWordRemoverFactory()
-stopword = factory.create_stop_word_remover()
-
-# stemmer Creation
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-factory = StemmerFactory()
-stemmer = factory.create_stemmer()
-
-# create an empty list of corpus
 corpus = []
-# converting Dataframe into List
 df_toList = df.values.tolist()
 
+
 for (kategori, berita) in df_toList:
-# 1. Tahap Punctuation removal
-# [^a-zA-Z] means: eliminate number and punctuation, except alphabet a-z and A-Z 
-    kalimat = re.sub('[^a-zA-Z]', ' ', berita)
-
-# 2. Tahap Lowercase operation
-kalimat = kalimat.lower()
-
-# 3. Tahap Stopwords removal
-kalimat = stopword.remove(kalimat)
-jumlah_kata_awal = len(kalimat.split())
-kondisi = True
-while(kondisi):
-    kalimat = re.sub(' +', ' ', kalimat)
+    berita = str(berita)
+    # Punctuation removal & Lowercase
+    kalimat = re.sub('[^a-zA-Z]', ' ', berita).lower()
+    # Stopwords removal (Disederhanakan tanpa loop while agar tidak macet)
+    kalimat = re.sub(' +', ' ', kalimat).strip()
     kalimat = stopword.remove(kalimat)
+    # Stemming
+    kalimat = stemmer.stem(kalimat)
+    corpus.append((kategori, kalimat))
 
-jumlah_kata_baru = len(kalimat.split())
-if(jumlah_kata_awal == jumlah_kata_baru):
-    kondisi = False
-else:
-    jumlah_kata_awal = jumlah_kata_baru
-
-#4. Tahap Stemming operation
-kalimat = stemmer.stem(kalimat)
-
-corpus.append((kategori, kalimat))
+# Konversi hasil ke DataFrame
+list_to_df = pd.DataFrame(corpus, columns=['kategori', 'berita'])
+list_to_df.dropna(subset=['berita'], inplace=True)
 
 '''
-Export data pada variabel corpus ke Excel
-'''
-dataset = DataFrame(corpus, columns = ['kategori', 'berita'])
-writer = ExcelWriter('text_preprocessing_result.xlsx')
-dataset.to_excel(writer, 'data_teks', index=False)
-writer.close()
+
+Tugas No. 1 - Skenario Penggunaan Data Uji 
+(0.2 untuk 20% / 0.3 untuk 30% / 0.4 untuk 40%)
 
 '''
-Gunakan kode python bagian ini, jika:
-dataset hasil pra-pemrosesan teks diambil dari Excel
-'''
-corpus = pd.read_excel('text_preprocessing_result.xlsx', sheet_name='data_teks')
+# ukuran_tes = 0.2  -> Data Uji 20%
+# ukuran_tes = 0.3 -> Data Uji 30%
+ukuran_tes = 0.4
 
-'''
-Machine Learning
-'''
-# konversi List ke Dataframe
-list_to_df = pd.DataFrame(corpus)
-# menambahkan nama kolom pada dataframe
-# eksekusi kode ini jika dataset tidak diambil dari Excel
-list_to_df.columns = ['kategori', 'berita']
-
-# create independent variable
+# --- 3. PREPARASI DATA ---
 X = list_to_df['berita']
-
-# create dependen/target variable
 y = list_to_df['kategori']
 
-# split the train and test dataset
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, stratify=y, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=ukuran_tes, stratify=y, random_state=42
+)
 
-# feature Extraction: Tf-IDF
+# Feature Extraction: Tf-IDF
 vectorization = TfidfVectorizer()
 x_train_tfidf = vectorization.fit_transform(X_train)
 x_test_tf_idf = vectorization.transform(X_test)
 
-# k-nearest neighbors
-classifier = KNeighborsClassifier(n_neighbors = 3, weights = 'distance')
-classifier.fit(x_train_tfidf, y_train)
+# --- 4. PEMODELAN ---
+# A. Model Logistic Regression
+model_lr = LogisticRegression()
+model_lr.fit(x_train_tfidf, y_train)
+y_pred_lr = model_lr.predict(x_test_tf_idf)
 
-# prediction
-y_pred = classifier.predict(x_test_tf_idf)
+# B. Model k-Nearest Neighbors
+model_knn = KNeighborsClassifier(n_neighbors=3, weights='distance')
+model_knn.fit(x_train_tfidf, y_train)
+y_pred_knn = model_knn.predict(x_test_tf_idf)
 
-'''
-Evaluasi Machine Learning
-'''
-# accuracy evaluation
-accuracy = accuracy_score(y_test, y_pred)
-print(f'Accuracy: {accuracy:.4f}')
+# --- 5. OUTPUT EVALUASI ---
+print(f"\n{'='*15} HASIL DATA UJI {int(ukuran_tes*100)}% {'='*15}")
+print("\n[1] PERFORMA LOGISTIC REGRESSION")
+print(f"Accuracy: {accuracy_score(y_test, y_pred_lr):.4f}")
+print(classification_report(y_test, y_pred_lr))
 
-# classification report
-print(classification_report(y_test,y_pred))
+print("\n[2] PERFORMA k-NEAREST NEIGHBORS")
+print(f"Accuracy: {accuracy_score(y_test, y_pred_knn):.4f}")
+print(classification_report(y_test, y_pred_knn))
 
-# confusion_matrix
-cm = confusion_matrix(y_test, y_pred)
-
-plt.figure(figsize=(8, 6))
-sns.heatmap(cm, annot=True, cmap='Blues', fmt='g',
-xticklabels=['Predicted 0', 'Predicted 1'],
-yticklabels=['Actual 0', 'Actual 1'])
-plt.xlabel('Predicted labels')
-plt.ylabel('True labels')
-plt.title('Confusion Matrix')
+# Visualisasi Confusion Matrix (Logistic Regression)
+cm = confusion_matrix(y_test, y_pred_lr)
+plt.figure(figsize=(6, 4))
+sns.heatmap(cm, annot=True, cmap='Blues', fmt='g', xticklabels=model_lr.classes_, yticklabels=model_lr.classes_)
+plt.title(f'Confusion Matrix LR (Data Uji {int(ukuran_tes*100)}%)')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
 plt.show()
