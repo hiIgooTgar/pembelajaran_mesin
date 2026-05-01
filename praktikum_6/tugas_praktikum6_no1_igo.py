@@ -49,9 +49,9 @@ Tugas No. 1 - Skenario Penggunaan Data Uji
 (0.2 untuk 20% / 0.3 untuk 30% / 0.4 untuk 40%)
 
 '''
-# ukuran_tes = 0.2  -> Data Uji 20%
+ukuran_tes = 0.2
 # ukuran_tes = 0.3 -> Data Uji 30%
-ukuran_tes = 0.4
+# ukuran_tes = 0.4  -> Data Uji 40%
 
 # --- 3. PREPARASI DATA ---
 X = list_to_df['berita']
